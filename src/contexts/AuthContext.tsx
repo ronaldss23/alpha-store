@@ -11,21 +11,20 @@ interface AuthContextType extends AuthState {
     removeAdminUser: (id: string) => Promise<void>;
 }
 
-type AdminUserRow = {
+type AdminProfileRow = {
     id: string;
-    username: string;
-    password: string;
+    email: string;
     role: string;
     created_at: string;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function fromSupabase(row: AdminUserRow): AdminCredentials {
+function fromProfile(row: AdminProfileRow): AdminCredentials {
     return {
         id: row.id,
-        username: row.username,
-        password: row.password,
+        username: row.email,
+        password: '',
         role: row.role,
         createdAt: row.created_at,
     };
@@ -39,94 +38,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     useEffect(() => {
-        const token = localStorage.getItem('alpha_store_admin_token');
-        const userStr = localStorage.getItem('alpha_store_admin_user');
+        const loadSession = async () => {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const session = sessionData.session;
 
-        if (token && userStr) {
-            try {
+            if (!session?.user) {
                 setAuth({
-                    user: JSON.parse(userStr),
-                    isAuthenticated: true,
-                    token,
+                    user: null,
+                    isAuthenticated: false,
+                    token: null,
                 });
-            } catch (e) {
-                logout();
+                return;
             }
-        }
+
+            const { data: profile, error } = await supabase
+                .from('admin_profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+
+            if (error || !profile) {
+                await supabase.auth.signOut();
+                setAuth({
+                    user: null,
+                    isAuthenticated: false,
+                    token: null,
+                });
+                return;
+            }
+
+            setAuth({
+                user: fromProfile(profile),
+                isAuthenticated: true,
+                token: session.access_token,
+            });
+        };
+
+        loadSession();
+
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!session?.user) {
+                setAuth({
+                    user: null,
+                    isAuthenticated: false,
+                    token: null,
+                });
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const login = async (username: string, password: string): Promise<boolean> => {
-        const { data, error } = await supabase
-            .from('admin_users')
-            .select('*')
-            .eq('username', username)
-            .eq('password', password)
-            .maybeSingle();
-
-        if (error) {
-            console.error('Erro ao fazer login admin:', error);
-            return false;
-        }
-
-        if (!data) {
-            return false;
-        }
-
-        const foundUser = fromSupabase(data);
-        const token = btoa(`${username}:${Date.now()}`);
-        const { password: _, ...userWithoutPass } = foundUser;
-
-        setAuth({
-            user: userWithoutPass,
-            isAuthenticated: true,
-            token,
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: username,
+            password,
         });
 
-        localStorage.setItem('alpha_store_admin_token', token);
-        localStorage.setItem('alpha_store_admin_user', JSON.stringify(userWithoutPass));
+        if (error || !data.user || !data.session) {
+            console.error('Erro ao fazer login:', error);
+            return false;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+            .from('admin_profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+        if (profileError || !profile) {
+            await supabase.auth.signOut();
+            console.error('Usuário não possui permissão de admin');
+            return false;
+        }
+
+        setAuth({
+            user: fromProfile(profile),
+            isAuthenticated: true,
+            token: data.session.access_token,
+        });
 
         return true;
-    };
-
-    const getAdminUsers = async (): Promise<AdminCredentials[]> => {
-        const { data, error } = await supabase
-            .from('admin_users')
-            .select('*')
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            console.error('Erro ao buscar admins:', error);
-            return [];
-        }
-
-        return (data || []).map(fromSupabase);
-    };
-
-    const addAdminUser = async (username: string, password: string): Promise<void> => {
-        const { error } = await supabase
-            .from('admin_users')
-            .insert({
-                username,
-                password,
-                role: 'admin',
-            });
-
-        if (error) {
-            console.error('Erro ao adicionar admin:', error);
-            throw error;
-        }
-    };
-
-    const removeAdminUser = async (id: string): Promise<void> => {
-        const { error } = await supabase
-            .from('admin_users')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error('Erro ao remover admin:', error);
-            throw error;
-        }
     };
 
     const logout = () => {
@@ -136,18 +132,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             token: null,
         });
 
-        localStorage.removeItem('alpha_store_admin_token');
-        localStorage.removeItem('alpha_store_admin_user');
+        supabase.auth.signOut();
     };
 
     const checkAuth = () => {
-        const token = localStorage.getItem('alpha_store_admin_token');
+        return auth.isAuthenticated;
+    };
 
-        if (!token) {
-            return false;
+    const getAdminUsers = async (): Promise<AdminCredentials[]> => {
+        const { data, error } = await supabase
+            .from('admin_profiles')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Erro ao buscar administradores:', error);
+            return [];
         }
 
-        return auth.isAuthenticated;
+        return (data || []).map(fromProfile);
+    };
+
+    const addAdminUser = async (username: string, password: string): Promise<void> => {
+        throw new Error('Agora os administradores devem ser criados pelo Supabase Auth.');
+    };
+
+    const removeAdminUser = async (id: string): Promise<void> => {
+        const { error } = await supabase
+            .from('admin_profiles')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Erro ao remover administrador:', error);
+            throw error;
+        }
     };
 
     return (
