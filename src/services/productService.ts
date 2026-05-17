@@ -1,59 +1,137 @@
 import { Product } from '../types';
 import { PRODUCTS as INITIAL_PRODUCTS } from '../data';
+import { supabase } from '../lib/supabase';
 
-const STORAGE_KEY = 'alpha_store_products';
+type ProductRow = {
+    id: string;
+    name: string;
+    price: number;
+    description: string;
+    image?: string | null;
+    images: string[];
+    category: Product['category'];
+    sizes: Product['sizes'];
+    is_new: boolean;
+    is_promo: boolean;
+    old_price?: number | null;
+};
+
+function fromSupabase(row: ProductRow): Product {
+    return {
+        id: row.id,
+        name: row.name,
+        price: Number(row.price),
+        description: row.description,
+        image: row.image || undefined,
+        images: row.images || [],
+        category: row.category,
+        sizes: row.sizes || [],
+        isNew: row.is_new,
+        isPromo: row.is_promo,
+        oldPrice: row.old_price ? Number(row.old_price) : undefined
+    };
+}
+
+function toSupabase(product: Product): ProductRow {
+    return {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        image: product.image || product.images?.[0] || null,
+        images: product.images || [],
+        category: product.category,
+        sizes: product.sizes || [],
+        is_new: !!product.isNew,
+        is_promo: !!product.isPromo,
+        old_price: product.oldPrice || null
+    };
+}
 
 export const ProductService = {
-    getProducts: (): Product[] => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        let products: Product[] = [];
-        
-        if (stored) {
-            try {
-                products = JSON.parse(stored);
-            } catch (e) {
-                console.error('Error parsing stored products', e);
-                products = INITIAL_PRODUCTS;
-            }
-        } else {
-            products = INITIAL_PRODUCTS;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PRODUCTS));
+    getProducts: async (): Promise<Product[]> => {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Erro ao buscar produtos no Supabase:', error);
+            return [];
         }
 
-        // Migration: ensure images array exists for all products
-        return products.map(p => {
-            if (!p.images || !Array.isArray(p.images)) {
-                return {
-                    ...p,
-                    images: p.image ? [p.image] : []
-                };
-            }
-            return p;
-        });
+        return (data || []).map(fromSupabase);
     },
 
-    saveProducts: (products: Product[]) => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    },
+    seedInitialProducts: async () => {
+        const products = await ProductService.getProducts();
 
-    addProduct: (product: Product) => {
-        const products = ProductService.getProducts();
-        products.push(product);
-        ProductService.saveProducts(products);
-    },
+        if (products.length > 0) {
+            return;
+        }
 
-    updateProduct: (updatedProduct: Product) => {
-        const products = ProductService.getProducts();
-        const index = products.findIndex(p => p.id === updatedProduct.id);
-        if (index !== -1) {
-            products[index] = updatedProduct;
-            ProductService.saveProducts(products);
+        const { error } = await supabase
+            .from('products')
+            .insert(INITIAL_PRODUCTS.map(toSupabase));
+
+        if (error) {
+            console.error('Erro ao inserir produtos iniciais:', error);
         }
     },
 
-    deleteProduct: (id: string) => {
-        const products = ProductService.getProducts();
-        const filtered = products.filter(p => p.id !== id);
-        ProductService.saveProducts(filtered);
+    saveProducts: async (products: Product[]) => {
+        const { error: deleteError } = await supabase
+            .from('products')
+            .delete()
+            .neq('id', '');
+
+        if (deleteError) {
+            console.error('Erro ao limpar produtos:', deleteError);
+            throw deleteError;
+        }
+
+        const { error: insertError } = await supabase
+            .from('products')
+            .insert(products.map(toSupabase));
+
+        if (insertError) {
+            console.error('Erro ao salvar produtos:', insertError);
+            throw insertError;
+        }
+    },
+
+    addProduct: async (product: Product) => {
+        const { error } = await supabase
+            .from('products')
+            .insert(toSupabase(product));
+
+        if (error) {
+            console.error('Erro ao adicionar produto:', error);
+            throw error;
+        }
+    },
+
+    updateProduct: async (updatedProduct: Product) => {
+        const { error } = await supabase
+            .from('products')
+            .update(toSupabase(updatedProduct))
+            .eq('id', updatedProduct.id);
+
+        if (error) {
+            console.error('Erro ao atualizar produto:', error);
+            throw error;
+        }
+    },
+
+    deleteProduct: async (id: string) => {
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Erro ao excluir produto:', error);
+            throw error;
+        }
     }
 };

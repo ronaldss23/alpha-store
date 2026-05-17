@@ -36,8 +36,13 @@ export function AdminDashboard() {
     const [currentImageUrl, setCurrentImageUrl] = useState('');
 
     useEffect(() => {
-        setProducts(ProductService.getProducts());
-    }, []);
+    const loadProducts = async () => {
+        const products = await ProductService.getProducts();
+        setProducts(products);
+    };
+
+    loadProducts();
+}, []);
 
     const addImageUrl = () => {
         if (!currentImageUrl) return;
@@ -70,7 +75,7 @@ export function AdminDashboard() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.name || !formData.price || (!formData.images || formData.images.length === 0)) {
             toast.error('Preencha os campos obrigatórios (Nome, Preço, Pelo menos 1 Imagem)');
             return;
@@ -90,21 +95,21 @@ export function AdminDashboard() {
         };
 
         if (isEditing) {
-            ProductService.updateProduct(productToSave);
+            await ProductService.updateProduct(productToSave);
             toast.success('Produto atualizado!');
         } else {
-            ProductService.addProduct(productToSave);
+            await ProductService.addProduct(productToSave);
             toast.success('Produto criado!');
         }
 
-        setProducts(ProductService.getProducts());
+         setProducts(await ProductService.getProducts());
         resetForm();
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja excluir este produto?')) {
-            ProductService.deleteProduct(id);
-            setProducts(ProductService.getProducts());
+            await ProductService.deleteProduct(id);
+            setProducts( await ProductService.getProducts());
             toast.success('Produto excluído');
         }
     };

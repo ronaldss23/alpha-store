@@ -23,10 +23,15 @@ export function Shop() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     useEffect(() => {
-        setProducts(ProductService.getProducts());
-        // Auto-scroll to top on load
+    const loadProducts = async () => {
+        await ProductService.seedInitialProducts();
+        const products = await ProductService.getProducts();
+        setProducts(products);
         window.scrollTo(0, 0);
-    }, []);
+    };
+
+    loadProducts();
+}, []);
 
     const filteredProducts = useMemo(() => {
         return products.filter(product => {
