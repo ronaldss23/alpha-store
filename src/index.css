@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+
+  --color-brand-gold: #C5A059;
+  --color-brand-silver: #E5E4E2;
+  --color-brand-black: #050505;
+  --color-brand-gray: #1A1A1A;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-black text-white selection:bg-brand-gold selection:text-black;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, .font-display {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-white text-black px-6 py-3 rounded-full font-medium transition-all hover:bg-brand-gold active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-outline {
+    @apply border border-white/20 text-white px-6 py-3 rounded-full font-medium transition-all hover:bg-white hover:text-black active:scale-95;
+  }
+
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-brand-black;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/20 rounded-full hover:bg-white/40 transition-colors;
+}
