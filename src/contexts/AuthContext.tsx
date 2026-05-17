@@ -1,16 +1,35 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AuthState, User, AdminCredentials } from '../types';
+import { AuthState, AdminCredentials } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType extends AuthState {
     login: (username: string, password: string) => Promise<boolean>;
     logout: () => void;
     checkAuth: () => boolean;
-    getAdminUsers: () => AdminCredentials[];
-    addAdminUser: (username: string, password: string) => void;
-    removeAdminUser: (id: string) => void;
+    getAdminUsers: () => Promise<AdminCredentials[]>;
+    addAdminUser: (username: string, password: string) => Promise<void>;
+    removeAdminUser: (id: string) => Promise<void>;
 }
 
+type AdminUserRow = {
+    id: string;
+    username: string;
+    password: string;
+    role: string;
+    created_at: string;
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function fromSupabase(row: AdminUserRow): AdminCredentials {
+    return {
+        id: row.id,
+        username: row.username,
+        password: row.password,
+        role: row.role,
+        createdAt: row.created_at,
+    };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [auth, setAuth] = useState<AuthState>({
@@ -22,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const token = localStorage.getItem('alpha_store_admin_token');
         const userStr = localStorage.getItem('alpha_store_admin_user');
-        
+
         if (token && userStr) {
             try {
                 setAuth({
@@ -37,73 +56,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const login = async (username: string, password: string): Promise<boolean> => {
-        // Obter lista de usuários (simulando backend)
-        const storedUsers = localStorage.getItem('alpha_store_admin_users');
-        
-        let users: AdminCredentials[] = [];
-        if (storedUsers) {
-            users = JSON.parse(storedUsers);
-        } else {
-            // Migrar credenciais antigas se existirem
-            const oldCreds = localStorage.getItem('alpha_store_admin_creds');
-            if (oldCreds) {
-                const { user: savedUser, pass: savedPass } = JSON.parse(oldCreds);
-                const initialUser: AdminCredentials = {
-                    id: '1',
-                    username: savedUser,
-                    password: savedPass,
-                    role: 'admin',
-                    createdAt: new Date().toISOString()
-                };
-                users = [initialUser];
-                localStorage.setItem('alpha_store_admin_users', JSON.stringify(users));
-                localStorage.removeItem('alpha_store_admin_creds');
-            }
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Erro ao fazer login admin:', error);
+            return false;
         }
 
-        const foundUser = users.find(u => u.username === username && u.password === password);
-        
-        if (foundUser) {
-            const token = btoa(`${username}:${Date.now()}`); // Mock token
-            const { password: _, ...userWithoutPass } = foundUser;
-            
-            setAuth({
-                user: userWithoutPass,
-                isAuthenticated: true,
-                token,
+        if (!data) {
+            return false;
+        }
+
+        const foundUser = fromSupabase(data);
+        const token = btoa(`${username}:${Date.now()}`);
+        const { password: _, ...userWithoutPass } = foundUser;
+
+        setAuth({
+            user: userWithoutPass,
+            isAuthenticated: true,
+            token,
+        });
+
+        localStorage.setItem('alpha_store_admin_token', token);
+        localStorage.setItem('alpha_store_admin_user', JSON.stringify(userWithoutPass));
+
+        return true;
+    };
+
+    const getAdminUsers = async (): Promise<AdminCredentials[]> => {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Erro ao buscar admins:', error);
+            return [];
+        }
+
+        return (data || []).map(fromSupabase);
+    };
+
+    const addAdminUser = async (username: string, password: string): Promise<void> => {
+        const { error } = await supabase
+            .from('admin_users')
+            .insert({
+                username,
+                password,
+                role: 'admin',
             });
-            
-            localStorage.setItem('alpha_store_admin_token', token);
-            localStorage.setItem('alpha_store_admin_user', JSON.stringify(userWithoutPass));
-            return true;
+
+        if (error) {
+            console.error('Erro ao adicionar admin:', error);
+            throw error;
         }
-        return false;
     };
 
-    const getAdminUsers = (): AdminCredentials[] => {
-        const stored = localStorage.getItem('alpha_store_admin_users');
-        return stored ? JSON.parse(stored) : [];
-    };
+    const removeAdminUser = async (id: string): Promise<void> => {
+        const { error } = await supabase
+            .from('admin_users')
+            .delete()
+            .eq('id', id);
 
-    const addAdminUser = (username: string, password: string) => {
-        const users = getAdminUsers();
-        const newUser: AdminCredentials = {
-            id: Date.now().toString(),
-            username,
-            password,
-            role: 'admin',
-            createdAt: new Date().toISOString()
-        };
-        const updatedUsers = [...users, newUser];
-        localStorage.setItem('alpha_store_admin_users', JSON.stringify(updatedUsers));
-    };
-
-    const removeAdminUser = (id: string) => {
-        const users = getAdminUsers();
-        // Não permitir remover o único usuário se for o próprio? 
-        // Simplificando: apenas remove
-        const updatedUsers = users.filter(u => u.id !== id);
-        localStorage.setItem('alpha_store_admin_users', JSON.stringify(updatedUsers));
+        if (error) {
+            console.error('Erro ao remover admin:', error);
+            throw error;
+        }
     };
 
     const logout = () => {
@@ -112,19 +135,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isAuthenticated: false,
             token: null,
         });
+
         localStorage.removeItem('alpha_store_admin_token');
         localStorage.removeItem('alpha_store_admin_user');
     };
 
     const checkAuth = () => {
         const token = localStorage.getItem('alpha_store_admin_token');
-        if (!token) return false;
-        
+
+        if (!token) {
+            return false;
+        }
+
         return auth.isAuthenticated;
     };
 
     return (
-        <AuthContext.Provider value={{ ...auth, login, logout, checkAuth, getAdminUsers, addAdminUser, removeAdminUser }}>
+        <AuthContext.Provider
+            value={{
+                ...auth,
+                login,
+                logout,
+                checkAuth,
+                getAdminUsers,
+                addAdminUser,
+                removeAdminUser,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -132,8 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
+
     if (context === undefined) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
+
     return context;
 }
