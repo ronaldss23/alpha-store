@@ -24,7 +24,6 @@ export function Shop() {
 
     useEffect(() => {
     const loadProducts = async () => {
-        await ProductService.seedInitialProducts();
         const products = await ProductService.getProducts();
         setProducts(products);
         window.scrollTo(0, 0);

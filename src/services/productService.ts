@@ -50,34 +50,23 @@ function toSupabase(product: Product): ProductRow {
 
 export const ProductService = {
     getProducts: async (): Promise<Product[]> => {
-        const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: true });
+    const { data, error } = await supabase
+        .from('products')
+        .select('id, name, price, description, image, images, category, sizes, is_new, is_promo, old_price');
 
-        if (error) {
-            console.error('Erro ao buscar produtos no Supabase:', error);
-            return [];
-        }
+    if (error) {
+        console.error('Erro ao buscar produtos no Supabase:', error);
+        return [];
+    }
 
-        return (data || []).map(fromSupabase);
-    },
+    return (data || []).map(fromSupabase);
+},
 
     seedInitialProducts: async () => {
-        const products = await ProductService.getProducts();
-
-        if (products.length > 0) {
-            return;
-        }
-
-        const { error } = await supabase
-            .from('products')
-            .insert(INITIAL_PRODUCTS.map(toSupabase));
-
-        if (error) {
-            console.error('Erro ao inserir produtos iniciais:', error);
-        }
-    },
+    // Desativado após migração para o Supabase.
+    // Os produtos agora são gerenciados pelo painel admin.
+    return;
+},
 
     saveProducts: async (products: Product[]) => {
         const { error: deleteError } = await supabase
