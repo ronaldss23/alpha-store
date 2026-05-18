@@ -51,7 +51,7 @@ function toSupabase(product: Product): ProductRow {
 export const ProductService = {
     getProducts: async (): Promise<Product[]> => {
     const { data, error } = await supabase
-        .from('products')
+        .from('products_v2')
         .select('id, name, price, description, image, images, category, sizes, is_new, is_promo, old_price');
 
     if (error) {
@@ -70,7 +70,7 @@ export const ProductService = {
 
     saveProducts: async (products: Product[]) => {
         const { error: deleteError } = await supabase
-            .from('products')
+            .from('products_v2')
             .delete()
             .neq('id', '');
 
@@ -80,7 +80,7 @@ export const ProductService = {
         }
 
         const { error: insertError } = await supabase
-            .from('products')
+            .from('products_v2')
             .insert(products.map(toSupabase));
 
         if (insertError) {
@@ -91,7 +91,7 @@ export const ProductService = {
 
     addProduct: async (product: Product) => {
         const { error } = await supabase
-            .from('products')
+            .from('products_v2')
             .insert(toSupabase(product));
 
         if (error) {
@@ -102,7 +102,7 @@ export const ProductService = {
 
     updateProduct: async (updatedProduct: Product) => {
         const { error } = await supabase
-            .from('products')
+            .from('products_v2')
             .update(toSupabase(updatedProduct))
             .eq('id', updatedProduct.id);
 
@@ -114,7 +114,7 @@ export const ProductService = {
 
     deleteProduct: async (id: string) => {
         const { error } = await supabase
-            .from('products')
+            .from('products_v2')
             .delete()
             .eq('id', id);
 
