@@ -1,4 +1,4 @@
-export type Category = 'Camisa de Time' | 'Casual' | 'Esportiva' | 'Lançamento' | 'Promoção';
+export type Category = string;
 
 export type Size = 'P' | 'M' | 'G' | 'GG' | 'XG';
 
