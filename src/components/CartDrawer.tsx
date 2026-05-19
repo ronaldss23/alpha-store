@@ -53,7 +53,13 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         message += `*ITENS DO PEDIDO*\n\n`;
 
         cart.forEach(item => {
-            message += `• *${item.name}*\nTamanho: ${item.selectedSize}\nQtd: ${item.quantity}\nSub: R$ ${(item.price * item.quantity).toFixed(2)}\n\n`;
+            const productCode = item.id.slice(-8).toUpperCase();
+
+            message += `• *${item.name}*\n`;
+            message += `ID: ${productCode}\n`;
+            message += `Tamanho: ${item.selectedSize}\n`;
+            message += `Qtd: ${item.quantity}\n`;
+            message += `Sub: R$ ${(item.price * item.quantity).toFixed(2)}\n\n`;
         });
 
         message += `*TOTAL: R$ ${subtotal.toFixed(2)}*\n\n---`;
