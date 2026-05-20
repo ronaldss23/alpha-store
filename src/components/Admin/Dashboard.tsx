@@ -9,6 +9,7 @@ import { UsersTab } from './UsersTab';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
 import toast from 'react-hot-toast';
+import { CategoryService, CategoryRecord } from '../../services/categoryService';
 
 type Tab = 'products' | 'settings' | 'users';
 
@@ -17,9 +18,11 @@ export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<Tab>('products');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<CategoryRecord[]>([]);
+    const [newCategoryName, setNewCategoryName] = useState('');
     const [isEditing, setIsEditing] = useState<Product | null>(null);
     const [isAdding, setIsAdding] = useState(false);
-    
+
     // New/Edit product form state
     const [formData, setFormData] = useState<Partial<Product>>({
         name: '',
@@ -36,13 +39,53 @@ export function AdminDashboard() {
     const [currentImageUrl, setCurrentImageUrl] = useState('');
 
     useEffect(() => {
-    const loadProducts = async () => {
-        const products = await ProductService.getProducts();
-        setProducts(products);
-    };
+        const loadProducts = async () => {
+            const products = await ProductService.getProducts();
+            setProducts(products);
+        };
 
-    loadProducts();
-}, []);
+        loadProducts();
+        loadCategories();
+    }, []);
+
+    async function loadCategories() {
+        try {
+            const categoryList = await CategoryService.getCategories();
+            setCategories(categoryList);
+        } catch (error) {
+            console.error(error);
+            toast.error('Erro ao carregar categorias');
+        }
+    }
+    const handleAddCategory = async () => {
+        const cleanName = newCategoryName.trim();
+
+        if (!cleanName) {
+            toast.error('Digite o nome da categoria');
+            return;
+        }
+
+        try {
+            await CategoryService.addCategory(cleanName);
+
+            const categoryList = await CategoryService.getCategories();
+            setCategories(categoryList);
+
+            setFormData({
+                ...formData,
+                category: cleanName
+            });
+
+            setNewCategoryName('');
+            toast.success('Categoria adicionada!');
+        } catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : 'Erro ao adicionar categoria';
+
+            toast.error(message);
+        }
+    };
 
     const addImageUrl = () => {
         if (!currentImageUrl) return;
@@ -71,7 +114,7 @@ export function AdminDashboard() {
             };
             reader.readAsDataURL(file);
         });
-        
+
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -102,14 +145,14 @@ export function AdminDashboard() {
             toast.success('Produto criado!');
         }
 
-         setProducts(await ProductService.getProducts());
+        setProducts(await ProductService.getProducts());
         resetForm();
     };
 
     const handleDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja excluir este produto?')) {
             await ProductService.deleteProduct(id);
-            setProducts( await ProductService.getProducts());
+            setProducts(await ProductService.getProducts());
             toast.success('Produto excluído');
         }
     };
@@ -151,9 +194,9 @@ export function AdminDashboard() {
                         </h1>
                         <p className="text-white/40 mt-2">Gerencie sua loja Alpha Store em tempo real.</p>
                     </div>
-                    
+
                     <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5 self-start md:self-center">
-                        <button 
+                        <button
                             onClick={() => setActiveTab('products')}
                             className={cn(
                                 "flex items-center gap-2 px-6 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider",
@@ -163,7 +206,7 @@ export function AdminDashboard() {
                             <LayoutDashboard className="w-4 h-4" />
                             Produtos
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('settings')}
                             className={cn(
                                 "flex items-center gap-2 px-6 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider",
@@ -173,7 +216,7 @@ export function AdminDashboard() {
                             <SettingsIcon className="w-4 h-4" />
                             Configurações
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('users')}
                             className={cn(
                                 "flex items-center gap-2 px-6 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider",
@@ -186,7 +229,7 @@ export function AdminDashboard() {
                     </div>
 
                     <div className="flex gap-4">
-                        <button 
+                        <button
                             onClick={handleLogout}
                             className="bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-500 p-4 rounded-2xl transition-all border border-white/10"
                             title="Sair do Painel"
@@ -229,7 +272,7 @@ export function AdminDashboard() {
 
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-2xl font-bold uppercase tracking-tight">Listagem de Catálogo</h2>
-                            <button 
+                            <button
                                 onClick={() => setIsAdding(true)}
                                 className="btn-primary flex items-center gap-3 px-8 py-4 shadow-xl"
                             >
@@ -291,13 +334,13 @@ export function AdminDashboard() {
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
                                                     <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button 
+                                                        <button
                                                             onClick={() => startEdit(product)}
                                                             className="p-3 bg-white/5 hover:bg-brand-gold hover:text-black rounded-xl transition-all border border-white/5"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleDelete(product.id)}
                                                             className="p-3 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-xl transition-all border border-white/5"
                                                         >
@@ -323,14 +366,14 @@ export function AdminDashboard() {
             <AnimatePresence>
                 {isAdding && (
                     <>
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[200]"
                             onClick={resetForm}
                         />
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 30 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 30 }}
@@ -354,27 +397,27 @@ export function AdminDashboard() {
                                 <div className="space-y-8">
                                     <div>
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Label Principal / Nome *</label>
-                                        <input 
-                                            type="text" 
+                                        <input
+                                            type="text"
                                             value={formData.name}
-                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all placeholder:text-white/10"
                                             placeholder="Ex: Camisa Barcelona 24/25 Retro"
                                         />
                                     </div>
-                                    
+
                                     <div>
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Ativos Visuais / Galeria *</label>
                                         <div className="space-y-4">
                                             <div className="flex gap-2">
-                                                <input 
-                                                    type="text" 
+                                                <input
+                                                    type="text"
                                                     value={currentImageUrl}
                                                     onChange={(e) => setCurrentImageUrl(e.target.value)}
                                                     className="flex-grow bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all text-sm"
                                                     placeholder="URL da Imagem externa..."
                                                 />
-                                                <button 
+                                                <button
                                                     onClick={addImageUrl}
                                                     type="button"
                                                     className="bg-brand-gold text-black px-6 rounded-2xl font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg"
@@ -382,9 +425,9 @@ export function AdminDashboard() {
                                                     Add URL
                                                 </button>
                                             </div>
-                                            
+
                                             <div className="relative">
-                                                <input 
+                                                <input
                                                     type="file"
                                                     ref={fileInputRef}
                                                     onChange={handleFileUpload}
@@ -392,7 +435,7 @@ export function AdminDashboard() {
                                                     multiple
                                                     className="hidden"
                                                 />
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => fileInputRef.current?.click()}
                                                     className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 py-5 rounded-2xl transition-all text-sm font-bold group"
@@ -406,8 +449,8 @@ export function AdminDashboard() {
                                                 {(formData.images || []).map((img, idx) => (
                                                     <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-white/10 bg-black">
                                                         <img src={img} className="w-full h-full object-cover" alt="" />
-                                                        <button 
-                                                            onClick={() => removeImageUrl(idx)} 
+                                                        <button
+                                                            onClick={() => removeImageUrl(idx)}
                                                             className="absolute inset-0 bg-red-500/80 items-center justify-center hidden group-hover:flex transition-all"
                                                         >
                                                             <Trash2 className="w-5 h-5 text-white" />
@@ -426,19 +469,19 @@ export function AdminDashboard() {
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
                                             <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Preço Atual (R$) *</label>
-                                            <input 
-                                                type="number" 
+                                            <input
+                                                type="number"
                                                 value={formData.price}
-                                                onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                                                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all font-bold text-lg"
                                             />
                                         </div>
                                         <div>
                                             <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Preço De (R$)</label>
-                                            <input 
-                                                type="number" 
+                                            <input
+                                                type="number"
                                                 value={formData.oldPrice}
-                                                onChange={(e) => setFormData({...formData, oldPrice: Number(e.target.value)})}
+                                                onChange={(e) => setFormData({ ...formData, oldPrice: Number(e.target.value) })}
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all text-white/50"
                                             />
                                         </div>
@@ -448,39 +491,60 @@ export function AdminDashboard() {
                                 <div className="space-y-8">
                                     <div>
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Categorização Profissional</label>
-                                        <select 
+                                        <select
                                             value={formData.category}
-                                            onChange={(e) => setFormData({...formData, category: e.target.value as Category})}
+                                            onChange={(e) => setFormData({ ...formData, category: e.target.value as Category })}
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all appearance-none cursor-pointer"
                                         >
-                                            <option value="Camisa de Time">Camisa de Time</option>
-                                            <option value="Casual">Casual</option>
-                                            <option value="Esportiva">Esportiva</option>
-                                            <option value="Lançamento">Lançamento</option>
-                                            <option value="Promoção">Promoção</option>
+                                            {categories.length === 0 ? (
+                                                <option value="Camisa de Time">Camisa de Time</option>
+                                            ) : (
+                                                categories.map((category) => (
+                                                    <option key={category.id} value={category.name}>
+                                                        {category.name}
+                                                    </option>
+                                                ))
+                                            )}
                                         </select>
+                                        <div className="flex gap-2 mt-3">
+                                            <input
+                                                type="text"
+                                                value={newCategoryName}
+                                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                                className="flex-grow bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all text-sm"
+                                                placeholder="Nova categoria..."
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={handleAddCategory}
+                                                className="bg-brand-gold text-black px-5 rounded-2xl font-bold text-sm hover:scale-105 active:scale-95 transition-all"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div>
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Tamanhos Disponíveis</label>
                                         <div className="flex flex-wrap gap-2">
-                                            {['P', 'M', 'G', 'GG', 'XG'].map((size) => (
+                                            {['P', 'M', 'G', 'GG', 'G1', 'G2', 'G3', 'XG', 'XXG'].map((size) => (
                                                 <button
                                                     key={size}
                                                     type="button"
                                                     onClick={() => {
                                                         const current = formData.sizes || [];
                                                         if (current.includes(size as Size)) {
-                                                            setFormData({...formData, sizes: current.filter(s => s !== size)});
+                                                            setFormData({ ...formData, sizes: current.filter(s => s !== size) });
                                                         } else {
-                                                            setFormData({...formData, sizes: [...current, size as Size]});
+                                                            setFormData({ ...formData, sizes: [...current, size as Size] });
                                                         }
                                                     }}
                                                     className={cn(
                                                         "w-12 h-12 rounded-xl border font-bold text-xs transition-all",
-                                                        formData.sizes?.includes(size as Size) 
-                                                        ? "bg-brand-gold border-brand-gold text-black" 
-                                                        : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                                                        formData.sizes?.includes(size as Size)
+                                                            ? "bg-brand-gold border-brand-gold text-black"
+                                                            : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
                                                     )}
                                                 >
                                                     {size}
@@ -491,14 +555,14 @@ export function AdminDashboard() {
 
                                     <div>
                                         <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Descrição Comercial</label>
-                                        <textarea 
+                                        <textarea
                                             value={formData.description}
-                                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 focus:border-brand-gold outline-none h-32 resize-none transition-all placeholder:text-white/10"
                                             placeholder="Descreva detalhes que vendem: tecido premium, ajuste atlético, edição limitada..."
                                         />
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-10 pt-4">
                                         <label className="flex items-center gap-4 cursor-pointer group">
                                             <div className={cn(
@@ -507,15 +571,15 @@ export function AdminDashboard() {
                                             )}>
                                                 {formData.isNew && <X className="w-4 h-4 text-black rotate-45" />}
                                             </div>
-                                            <input 
-                                                type="checkbox" 
+                                            <input
+                                                type="checkbox"
                                                 checked={formData.isNew}
-                                                onChange={(e) => setFormData({...formData, isNew: e.target.checked})}
+                                                onChange={(e) => setFormData({ ...formData, isNew: e.target.checked })}
                                                 className="hidden"
                                             />
                                             <span className="text-xs font-bold uppercase tracking-widest text-white/60">É Lançamento?</span>
                                         </label>
-                                        
+
                                         <label className="flex items-center gap-4 cursor-pointer group">
                                             <div className={cn(
                                                 "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
@@ -523,10 +587,10 @@ export function AdminDashboard() {
                                             )}>
                                                 {formData.isPromo && <X className="w-4 h-4 text-white rotate-45" />}
                                             </div>
-                                            <input 
-                                                type="checkbox" 
+                                            <input
+                                                type="checkbox"
                                                 checked={formData.isPromo}
-                                                onChange={(e) => setFormData({...formData, isPromo: e.target.checked})}
+                                                onChange={(e) => setFormData({ ...formData, isPromo: e.target.checked })}
                                                 className="hidden"
                                             />
                                             <span className="text-xs font-bold uppercase tracking-widest text-white/60">Está em Promoção?</span>
@@ -536,14 +600,14 @@ export function AdminDashboard() {
                             </div>
 
                             <div className="mt-12 pt-10 border-t border-white/5 flex gap-4">
-                                <button 
+                                <button
                                     onClick={handleSave}
                                     className="flex-grow bg-brand-gold text-black py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_50px_rgba(197,160,89,0.3)]"
                                 >
                                     <Save className="w-6 h-6" />
                                     {isEditing ? 'Confirmar Atualização' : 'Efetivar Cadastro'}
                                 </button>
-                                <button 
+                                <button
                                     onClick={resetForm}
                                     className="px-10 py-6 bg-white/5 hover:bg-white/10 text-white/60 rounded-2xl font-bold uppercase tracking-widest transition-all border border-white/10"
                                 >
