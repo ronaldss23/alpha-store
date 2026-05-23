@@ -37,7 +37,7 @@ export function Hero() {
 
                     <div className="mt-8">
                         <img
-                            src="/logo-alpha-hero.png"
+                            src="/topo-logo.png"
                             alt="Alpha Store"
                             className="w-[220px] sm:w-[280px] md:w-[340px] lg:w-[390px] object-contain drop-shadow-[0_0_35px_rgba(197,160,89,0.25)]"
                         />
