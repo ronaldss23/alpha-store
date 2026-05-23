@@ -1,74 +1,67 @@
-import { motion } from 'motion/react';
-import { ArrowRight } from 'lucide-react';
+import React from 'react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 export function Hero() {
     const { settings } = useSettings();
 
+    const heroImage = settings.heroBanner || '/hero-football.jpg';
+
     return (
-        <section className="relative h-screen flex items-center overflow-hidden pt-20">
-            {/* Background Image with Overlay */}
-            <div className="absolute inset-0 z-0 text-center">
-                <img 
-                    src={settings.heroBanner || "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2000&auto=format&fit=crop"} 
-                    alt="Hero Background" 
-                    className="w-full h-full object-cover opacity-40 scale-105"
+        <section
+            id="inicio"
+            className="relative min-h-[760px] md:min-h-[860px] overflow-hidden bg-black flex items-center"
+        >
+            {/* Imagem de fundo */}
+            <div className="absolute inset-0">
+                <img
+                    src={heroImage}
+                    alt="Alpha Store"
+                    className="w-full h-full object-cover object-center opacity-75"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/40 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-black to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/10" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_45%,rgba(197,160,89,0.18),transparent_35%)]" />
             </div>
 
-            <div className="container mx-auto px-6 relative z-10">
-                <div className="max-w-4xl">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                    >
-                        {settings.heroTagline && (
-                            <span className="inline-block px-4 py-1.5 bg-brand-gold text-black text-xs font-bold uppercase tracking-[0.2em] mb-6 rounded-sm">
-                                {settings.heroTagline}
-                            </span>
-                        )}
-                        <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold uppercase leading-[0.9] mb-8">
-                            {settings.heroTitle.split(' ').map((word, i) => (
-                                i === 1 ? <span key={i} className="text-brand-gold block">{word} </span> : <span key={i}>{word} </span>
-                            ))}
-                        </h1>
-                        <p className="text-lg md:text-xl text-white/60 max-w-xl mb-12 font-light">
-                            {settings.description}
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <a href="#colecao" className="btn-primary flex items-center justify-center gap-2 group">
-                                Ver Coleção
-                                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                            </a>
-                            <a href="#lancamentos" className="btn-outline flex items-center justify-center">
-                                Últimos Lançamentos
-                            </a>
-                        </div>
-                    </motion.div>
+            {/* Conteúdo */}
+            <div className="relative z-10 max-w-7xl mx-auto w-full px-6 md:px-10 pt-40 md:pt-52 pb-24">
+                <div className="max-w-3xl">
+                    <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full border border-brand-gold/30 bg-black/35 backdrop-blur-sm mb-8">
+                        <Sparkles className="w-4 h-4 text-brand-gold" />
+                        <span className="text-[10px] md:text-xs uppercase tracking-[0.25em] font-black text-brand-gold">
+                            {settings.heroTagline || 'Sempre novas coleções'}
+                        </span>
+                    </div>
+
+                    <h1 className="text-6xl md:text-8xl lg:text-9xl font-black uppercase leading-[0.85] tracking-tighter text-white">
+                        {settings.heroTitle || 'O Padrão'} <br />
+                        <span className="text-brand-gold">Alpha</span>
+                    </h1>
+
+                    <p className="mt-8 max-w-xl text-base md:text-lg text-white/65 leading-relaxed">
+                        {settings.description ||
+                            'Vista-se com a autoridade que você merece. Camisas de time, moda esportiva e peças selecionadas para quem busca presença.'}
+                    </p>
+
+                    <div className="mt-10 flex flex-col sm:flex-row gap-4">
+                        <a
+                            href="#colecao"
+                            className="inline-flex items-center justify-center gap-3 bg-brand-gold text-black px-8 py-5 rounded-2xl font-black uppercase tracking-[0.18em] text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(197,160,89,0.22)]"
+                        >
+                            Ver coleção
+                            <ArrowRight className="w-5 h-5" />
+                        </a>
+
+                        <a
+                            href="#lancamentos"
+                            className="inline-flex items-center justify-center border border-white/15 bg-white/5 text-white px-8 py-5 rounded-2xl font-black uppercase tracking-[0.18em] text-xs hover:border-brand-gold/50 hover:text-brand-gold transition-all"
+                        >
+                            Lançamentos
+                        </a>
+                    </div>
                 </div>
             </div>
-
-            {/* Side Labels (Recipe 11) */}
-            <div className="absolute right-10 bottom-24 hidden lg:block overflow-hidden">
-                <div className="flex flex-col items-center gap-8">
-                    <div className="h-24 w-[1px] bg-white/20" />
-                    <span className="writing-mode-vertical-rl rotate-180 uppercase tracking-[0.5em] text-[10px] font-bold text-white/40">
-                        Scroll Down
-                    </span>
-                </div>
-            </div>
-
-            <style>{`
-                .border-text {
-                    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
-                }
-                .writing-mode-vertical-rl {
-                    writing-mode: vertical-rl;
-                }
-            `}</style>
         </section>
     );
 }
