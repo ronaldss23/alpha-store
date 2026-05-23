@@ -31,6 +31,7 @@ export function AdminDashboard() {
         images: [],
         category: 'Camisa de Time',
         sizes: ['P', 'M', 'G', 'GG'],
+        stock: 0,
         isNew: false,
         isPromo: false,
         oldPrice: 0
@@ -130,6 +131,8 @@ export function AdminDashboard() {
             price: Number(formData.price),
             description: formData.description || '',
             images: formData.images!,
+            image: formData.images?.[0],
+            stock: Number(formData.stock || 0),
             category: (formData.category as Category) || 'Camisa de Time',
             sizes: (formData.sizes as Size[]) || ['P', 'M', 'G', 'GG'],
             isNew: !!formData.isNew,
@@ -167,6 +170,7 @@ export function AdminDashboard() {
             images: [],
             category: 'Camisa de Time',
             sizes: ['P', 'M', 'G', 'GG'],
+            stock: 0,   
             isNew: false,
             isPromo: false,
             oldPrice: 0
@@ -466,9 +470,11 @@ export function AdminDashboard() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
-                                            <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Preço Atual (R$) *</label>
+                                            <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">
+                                                Preço Atual (R$) *
+                                            </label>
                                             <input
                                                 type="number"
                                                 value={formData.price}
@@ -476,13 +482,29 @@ export function AdminDashboard() {
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all font-bold text-lg"
                                             />
                                         </div>
+
                                         <div>
-                                            <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">Preço De (R$)</label>
+                                            <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">
+                                                Preço De (R$)
+                                            </label>
                                             <input
                                                 type="number"
                                                 value={formData.oldPrice}
                                                 onChange={(e) => setFormData({ ...formData, oldPrice: Number(e.target.value) })}
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all text-white/50"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-3 font-bold ml-1">
+                                                Estoque
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.stock ?? 0}
+                                                onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:border-brand-gold outline-none transition-all font-bold text-lg"
                                             />
                                         </div>
                                     </div>

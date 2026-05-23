@@ -14,6 +14,7 @@ type ProductRow = {
     is_new: boolean;
     is_promo: boolean;
     old_price?: number | null;
+    stock: number;
 };
 
 function fromSupabase(row: ProductRow): Product {
@@ -23,6 +24,7 @@ function fromSupabase(row: ProductRow): Product {
         price: Number(row.price),
         description: row.description,
         image: row.image || undefined,
+        stock: row.stock ?? 0,
         images: row.images || [],
         category: row.category,
         sizes: row.sizes || [],
@@ -40,6 +42,7 @@ function toSupabase(product: Product): ProductRow {
         description: product.description,
         image: product.image || product.images?.[0] || null,
         images: product.images || [],
+        stock: product.stock ?? 0,
         category: product.category,
         sizes: product.sizes || [],
         is_new: !!product.isNew,
@@ -50,23 +53,23 @@ function toSupabase(product: Product): ProductRow {
 
 export const ProductService = {
     getProducts: async (): Promise<Product[]> => {
-    const { data, error } = await supabase
-        .from('products_v2')
-        .select('id, name, price, description, image, images, category, sizes, is_new, is_promo, old_price');
+        const { data, error } = await supabase
+            .from('products_v2')
+            .select('id, name, price, description, image, images, category, sizes, stock, is_new, is_promo, old_price');
 
-    if (error) {
-        console.error('Erro ao buscar produtos no Supabase:', error);
-        return [];
-    }
+        if (error) {
+            console.error('Erro ao buscar produtos no Supabase:', error);
+            return [];
+        }
 
-    return (data || []).map(fromSupabase);
-},
+        return (data || []).map(fromSupabase);
+    },
 
     seedInitialProducts: async () => {
-    // Desativado após migração para o Supabase.
-    // Os produtos agora são gerenciados pelo painel admin.
-    return;
-},
+        // Desativado após migração para o Supabase.
+        // Os produtos agora são gerenciados pelo painel admin.
+        return;
+    },
 
     saveProducts: async (products: Product[]) => {
         const { error: deleteError } = await supabase

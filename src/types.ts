@@ -14,6 +14,7 @@ export interface Product {
     isNew?: boolean;
     isPromo?: boolean;
     oldPrice?: number;
+    stock?: number;
 }
 
 export interface CartItem extends Product {
