@@ -170,7 +170,7 @@ export function AdminDashboard() {
             images: [],
             category: 'Camisa de Time',
             sizes: ['P', 'M', 'G', 'GG'],
-            stock: 0,   
+            stock: 0,
             isNew: false,
             isPromo: false,
             oldPrice: 0
